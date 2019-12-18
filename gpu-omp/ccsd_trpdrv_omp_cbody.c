@@ -3,6 +3,7 @@
 #ifndef SKIP_DGEMM
 #if defined(MKL)
 # include <mkl.h>
+# include <mkl_omp_offload.h>
 # ifndef MKL_INT
 #  error MKL_INT not defined!
 # endif
