@@ -1,0 +1,3 @@
+*.o
+test_c99
+test_f77
