@@ -5,7 +5,10 @@ OMPFLAGS	+= -fopenmp-targets=spir64 -DUSE_OPENMP_TARGET -DOPENMP_TARGET_VARIANT=
 OPTFLAGS	 = -O3
 #MKLFLAGS	 = -DSKIP_DGEMM
 MKLFLAGS	 = -DMKL
-MKLROOT		 = /soft/restricted/CNDA/sdk/2019.11.15.015/mkl/2020.0
+# JLSE
+#MKLROOT		 = /soft/restricted/CNDA/sdk/2019.11.15.015/mkl/2020.0
+# ORTCE
+MKLROOT		 = /opt/intel/inteloneapi/mkl/2021.1-beta03
 MKL_INCLUDE	+= -I$(MKLROOT)/include
 MKL_LIBS	+= -Wl,--start-group $(MKLROOT)/lib/intel64/libmkl_intel_ilp64.a $(MKLROOT)/lib/intel64/libmkl_sequential.a $(MKLROOT)/lib/intel64/libmkl_core.a -Wl,--end-group -lOpenCL -lpthread -ldl -lm
 
@@ -36,7 +39,7 @@ ccsd_trpdrv_omp_f77.o: ccsd_trpdrv_omp_f77.f
 ccsd_trpdrv_omp_f90.o: ccsd_trpdrv_omp_f90.f
 	$(FC) $(FFLAGS) -free -c $< -o $@
 
-test_c99: test.c ccsd_trpdrv_omp_cbody.o ccsd_tengy_c99.o
+test_c99: test.c ccsd_trpdrv_omp_cbody.o
 	$(CC) $(CFLAGS) $^ $(VTUNELIB) $(MKL_LIBS) -o $@
 
 test_f77: test.c ccsd_trpdrv_omp_f77.o ccsd_tengy_f77.o
