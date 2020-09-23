@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
     float * t1v2   = make_array(lnvv);
 
     int ntimers = MIN(maxiter,nocc*nocc*nocc*nocc);
-    double * timers = calloc(ntimers,sizeof(float));
+    double * timers = calloc(ntimers,sizeof(*timers));
 
     float emp4=0.0, emp5=0.0;
     int a=1, i=1, j=1, k=1, klo=1;
