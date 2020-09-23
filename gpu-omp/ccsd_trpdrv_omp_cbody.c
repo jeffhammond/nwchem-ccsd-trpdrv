@@ -106,9 +106,9 @@ void ccsd_trpdrv_omp_cbody_(float * restrict f1n, float * restrict f1t,
 #endif // SKIP_DGEMM
 
     /* convert from Fortran to C offset convention... */
-    const int a   = *a_ - 1; /* unused */
-    const int i   = *i_ - 1; /* unnecessary */
-    const int j   = *j_ - 1; /* unused */
+    const int a   = *a_ - 1;
+    const int i   = *i_ - 1;
+    const int j   = *j_ - 1;
 
     const float eaijk = eorb[a] - (eorb[ncor+i] + eorb[ncor+j] + eorb[ncor+k]);
 
@@ -125,7 +125,7 @@ void ccsd_trpdrv_omp_cbody_(float * restrict f1n, float * restrict f1t,
                        map(to: ncor, nocc, nvir, eaijk) \
                        map(tofrom: emp5i, emp4i, emp5k, emp4k)
 
-    #pragma omp teams distribute parallel for collapse(2) reduction(+:emp5i,emp4i) reduction(+:emp5k,emp4k)
+    #pragma omp teams distribute parallel for collapse(2) reduction(+:emp5i,emp4i,emp5k,emp4k)
     for (int b = 0; b < nvir; ++b) {
         for (int c = 0; c < nvir; ++c) {
 
