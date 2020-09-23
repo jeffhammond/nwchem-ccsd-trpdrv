@@ -1,3 +1,5 @@
+!!!$omp requires unified_address
+
       subroutine ccsd_tengy_omp(f1n,f1t,f2n,f2t,f3n,f3t,f4n,f4t,
      &                          dintc1,dintc2,dintx1,dintx2,
      &                          t1v1,t1v2,eorb,eaijk,
@@ -27,10 +29,9 @@
 !$omp& shared(f1n,f2n,f3n,f4n,f1t,f2t,f3t,f4t)
 !$omp& shared(t1v1,dintc1,dintx1)
 !$omp& shared(t1v2,dintc2,dintx2)
+!$omp& shared(ncor,nocc,nvir)
 !$omp& private(denom)
-!$omp& firstprivate(ncor,nocc,nvir)
-!$omp& reduction(+:emp5i,emp4i)
-!$omp& reduction(+:emp5k,emp4k)
+!$omp& reduction(+:emp5i,emp4i,emp5k,emp4k)
       do b=1,nvir
         do c=1,nvir
           denom=-1.0d0/(eorb(ncor+nocc+b)+eorb(ncor+nocc+c)+eaijk)
