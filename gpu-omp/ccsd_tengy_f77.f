@@ -17,8 +17,6 @@
       double precision t1v1(nvir),t1v2(nvir)
       double precision eorb(ncor+nocc+nvir)
       double precision eaijk,denom
-      integer chunking
-      chunking = 32
 !$omp target map(to: f1n, f1t, f2n, f2t, f3n, f3t, f4n, f4t )
 !$omp&       map(to: dintc1, dintc2, dintx1, dintx2, t1v1, t1v2 )
 !$omp&       map(to: eorb, ncor, nocc, nvir, eaijk)
