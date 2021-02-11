@@ -1,5 +1,6 @@
 //#include <stdio.h>
 
+//#define SKIP_DGEMM
 #ifndef SKIP_DGEMM
 #if defined(MKL)
 # include <mkl.h>
@@ -37,6 +38,7 @@ void ccsd_trpdrv_omp_cbody_(float * restrict f1n, float * restrict f1t,
 {
     float emp4 = *emp4_;
     float emp5 = *emp5_;
+    float emp5i = 0.0, emp4i = 0.0, emp5k = 0.0, emp4k = 0.0;
 
     const int ncor = *ncor_;
     const int nocc = *nocc_;
@@ -46,86 +48,130 @@ void ccsd_trpdrv_omp_cbody_(float * restrict f1n, float * restrict f1t,
     const int lnvv = nvir * nvir;
 
     /* convert from Fortran to C offset convention... */
+    const int a   = *a_ - 1;
+    const int i   = *i_ - 1;
+    const int j   = *j_ - 1;
     const int k   = *k_ - 1;
     const int klo = *klo_ - 1;
 
 #ifndef SKIP_DGEMM
-
     const cblas_int nv = nvir;
     const cblas_int no = nocc;
-
-    {
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasTrans,
-                    nv, nv, nv, 1.0, jia, nv, &tkj[(k-klo)*lnvv], nv, 0.0, f1n, nv);
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                    nv, nv, no, -1.0, tia, nv, &kkj[(k-klo)*lnov], no, 1.0, f1n, nv);
-    }
-    {
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasTrans,
-                    nv, nv, nv, 1.0, kia, nv, &tkj[(k-klo)*lnvv], nv, 0.0, f2n, nv);
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                    nv, nv, no, -1.0, xia, nv, &kkj[(k-klo)*lnov], no, 1.0, f2n, nv);
-    }
-    {
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                    nv, nv, nv, 1.0, jia, nv, &tkj[(k-klo)*lnvv], nv, 0.0, f3n, nv);
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                    nv, nv, no, -1.0, tia, nv, &jkj[(k-klo)*lnov], no, 1.0, f3n, nv);
-    }
-    {
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                    nv, nv, nv, 1.0, kia, nv, &tkj[(k-klo)*lnvv], nv, 0.0, f4n, nv);
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                    nv, nv, no, -1.0, xia, nv, &jkj[(k-klo)*lnov], no, 1.0, f4n, nv);
-    }
-    {
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasTrans,
-                    nv, nv, nv, 1.0, &jka[(k-klo)*lnvv], nv, tij, nv, 0.0, f1t, nv);
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                    nv, nv, no, -1.0, &tka[(k-klo)*lnov], nv, kij, no, 1.0, f1t, nv);
-    }
-    {
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasTrans,
-                    nv, nv, nv, 1.0, &kka[(k-klo)*lnvv], nv, tij, nv, 0.0, f2t, nv);
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                    nv, nv, no, -1.0, &xka[(k-klo)*lnov], nv, kij, no, 1.0, f2t, nv);
-    }
-    {
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                    nv, nv, nv, 1.0, &jka[(k-klo)*lnvv], nv, tij, nv, 0.0, f3t, nv);
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                    nv, nv, no, -1.0, &tka[(k-klo)*lnov], nv, jij, no, 1.0, f3t, nv);
-    }
-    {
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                    nv, nv, nv, 1.0, &kka[(k-klo)*lnvv], nv, tij, nv, 0.0, f4t, nv);
-        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                    nv, nv, no, -1.0, &xka[(k-klo)*lnov], nv, jij, no, 1.0, f4t, nv);
-    }
-
-#endif // SKIP_DGEMM
-
-    /* convert from Fortran to C offset convention... */
-    const int a   = *a_ - 1;
-    const int i   = *i_ - 1;
-    const int j   = *j_ - 1;
+#endif
 
     const float eaijk = eorb[a] - (eorb[ncor+i] + eorb[ncor+j] + eorb[ncor+k]);
 
-    float emp5i = 0.0, emp4i = 0.0, emp5k = 0.0, emp4k = 0.0;
+    float *tkj_tmp = &tkj[(k-klo)*lnvv];
+    float *kkj_tmp = &kkj[(k-klo)*lnov];
+    float *jkj_tmp = &jkj[(k-klo)*lnov];
+    float *jka_tmp = &jka[(k-klo)*lnvv];
+    float *tka_tmp = &tka[(k-klo)*lnov];
+    float *kka_tmp = &kka[(k-klo)*lnvv];
+    float *xka_tmp = &xka[(k-klo)*lnov];
 
-    #pragma omp target map(to: f1n[0:nvir*nvir], f1t[0:nvir*nvir], \
-                               f2n[0:nvir*nvir], f2t[0:nvir*nvir], \
-                               f3n[0:nvir*nvir], f3t[0:nvir*nvir], \
-                               f4n[0:nvir*nvir], f4t[0:nvir*nvir] ) \
-                       map(to: dintc1[0:nvir], dintc2[0:nvir], \
-                               dintx1[0:nvir], dintx2[0:nvir], \
-                               t1v1[0:nvir],   t1v2[0:nvir] ) \
-                       map(to: eorb[0:ncor+nocc+nvir] ) \
-                       map(to: ncor, nocc, nvir, eaijk) \
-                       map(tofrom: emp5i, emp4i, emp5k, emp4k)
+#ifndef SKIP_DGEMM
+    {
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(jia,tkj_tmp,f1n)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasTrans,
+                    nv, nv, nv, 1.0, jia, nv, tkj_tmp, nv, 0.0, f1n, nv);
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(tia,kkj_tmp,f1n)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    nv, nv, no, -1.0, tia, nv, kkj_tmp, no, 1.0, f1n, nv);
+    }
+    {
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(kia,tkj_tmp,f2n)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasTrans,
+                    nv, nv, nv, 1.0, kia, nv, tkj_tmp, nv, 0.0, f2n, nv);
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(xia,kkj_tmp,f2n)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    nv, nv, no, -1.0, xia, nv, kkj_tmp, no, 1.0, f2n, nv);
+    }
+    {
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(jia,tkj_tmp,f3n)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    nv, nv, nv, 1.0, jia, nv, tkj_tmp, nv, 0.0, f3n, nv);
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(tia,jkj_tmp,f3n)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    nv, nv, no, -1.0, tia, nv, jkj_tmp, no, 1.0, f3n, nv);
+    }
+    {
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(kia,tkj_tmp,f4n)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    nv, nv, nv, 1.0, kia, nv, tkj_tmp, nv, 0.0, f4n, nv);
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(xia,jkj_tmp,f4n)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    nv, nv, no, -1.0, xia, nv, jkj_tmp, no, 1.0, f4n, nv);
+    }
+    {
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(jka_tmp,tij,f1t)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasTrans,
+                    nv, nv, nv, 1.0, jka_tmp, nv, tij, nv, 0.0, f1t, nv);
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(tka_tmp,kij,f1t)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    nv, nv, no, -1.0, tka_tmp, nv, kij, no, 1.0, f1t, nv);
+    }
+    {
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(kka_tmp,tij,f2t)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasTrans,
+                    nv, nv, nv, 1.0, kka_tmp, nv, tij, nv, 0.0, f2t, nv);
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(xka_tmp,kij,f2t)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    nv, nv, no, -1.0, xka_tmp, nv, kij, no, 1.0, f2t, nv);
+    }
+    {
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(jka_tmp,tij,f3t)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    nv, nv, nv, 1.0, jka_tmp, nv, tij, nv, 0.0, f3t, nv);
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(tka_tmp,jij,f3t)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    nv, nv, no, -1.0, tka_tmp, nv, jij, no, 1.0, f3t, nv);
+    }
+    {
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(kka_tmp,tij,f4t)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    nv, nv, nv, 1.0, kka_tmp, nv, tij, nv, 0.0, f4t, nv);
+#if USE_OPENMP_TARGET
+#pragma omp target variant dispatch use_device_ptr(xka_tmp,jij,f4t)
+#endif  // USE_OPENMP_TARGET
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    nv, nv, no, -1.0, xka_tmp, nv, jij, no, 1.0, f4t, nv);
+    }
+#endif // SKIP_DGEMM
 
+#if USE_OPENMP_TARGET
+    #pragma omp target map(tofrom: emp5i, emp4i, emp5k, emp4k)
     #pragma omp teams distribute parallel for collapse(2) reduction(+:emp5i,emp4i,emp5k,emp4k)
+#endif  // USE_OPENMP_TARGET
     for (int b = 0; b < nvir; ++b) {
         for (int c = 0; c < nvir; ++c) {
 
