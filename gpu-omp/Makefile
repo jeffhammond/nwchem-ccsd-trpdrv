@@ -4,13 +4,15 @@ OMPFLAGS	 = -fiopenmp
 OMPFLAGS	+= -fopenmp-targets=spir64 -DUSE_OPENMP_TARGET -DOPENMP_TARGET_VARIANT=$(VARIANT)
 OPTFLAGS	 = -O3
 #MKLFLAGS	 = -DSKIP_DGEMM
-MKLFLAGS	 = -DMKL -mkl
+MKLFLAGS	 = -DMKL -qmkl -DMKL_ILP64
 #MKLROOT		:= /opt/intel/oneapi/mkl/latest
 #MKL_INCLUDE	+= -I$(MKLROOT)/include
 #MKL_LIBS	+= -Wl,--start-group $(MKLROOT)/lib/intel64/libmkl_intel_ilp64.a $(MKLROOT)/lib/intel64/libmkl_sequential.a $(MKLROOT)/lib/intel64/libmkl_core.a -Wl,--end-group -lOpenCL -lpthread -ldl -lm
+MKL_LIBS        += -fsycl -qmkl
 
-CC		 = icx -std=c99
-CFLAGS		 = $(OMPFLAGS) $(OPTFLAGS) $(MKLFLAGS)
+CC		 = icx
+CFLAGS		 = -std=c99 $(OMPFLAGS) $(OPTFLAGS) $(MKLFLAGS)
+LINKFLAGS        = $(OMPFLAGS) $(OPTFLAGS) $(MKLFLAGS)
 #CFLAGS		+= -I/opt/intel/vtune_amplifier_2018/include -DUSE_VTUNE
 #VTUNELIB	 = /opt/intel/vtune_amplifier_2018/lib64/libittnotify.a
 #CFLAGS		+= -I/swtools/intel/vtune_amplifier_2018/include -DUSE_VTUNE
@@ -36,11 +38,17 @@ ccsd_trpdrv_omp_f77.o: ccsd_trpdrv_omp_f77.f
 ccsd_trpdrv_omp_f90.o: ccsd_trpdrv_omp_f90.f
 	$(FC) $(FFLAGS) -free -c $< -o $@
 
-test_c99: test.c ccsd_trpdrv_omp_cbody.o
-	$(CC) $(CFLAGS) $^ $(VTUNELIB) $(MKL_LIBS) -o $@
+test_c99.o: test.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-test_f77: test.c ccsd_trpdrv_omp_f77.o ccsd_tengy_f77.o
-	$(CC) $(CFLAGS) -DUSE_FORTRAN $^ $(VTUNELIB) $(MKL_LIBS) -o $@
+test_f77.o: test.c
+	$(CC) $(CFLAGS) -DUSE_FORTRAN -c $< -o $@
+
+test_c99: test_c99.o ccsd_trpdrv_omp_cbody.o
+	$(CC) $(LINKFLAGS) $^ $(VTUNELIB) $(MKL_LIBS) -o $@
+
+test_f77: test_f77.o ccsd_trpdrv_omp_f77.o ccsd_tengy_f77.o
+	$(CC) $(LINKFLAGS) -DUSE_FORTRAN $^ $(VTUNELIB) $(MKL_LIBS) -o $@
 
 clean:
 	rm -f test

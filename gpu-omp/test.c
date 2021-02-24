@@ -134,10 +134,8 @@ int main(int argc, char* argv[])
     float * Jkj  = make_array(kchunk*lnov);
     float * Kij  = make_array(lnov*nocc);
     float * Kkj  = make_array(kchunk*lnov);
-    float * Dja  = make_array(lnov);
-    float * Djka = make_array(nvir*kchunk);
-    float * Djia = make_array(nvir*nocc);
 
+    // It looks like overallocation: nvir elements are being accessed.
     float * dintc1 = make_array(lnvv);
     float * dintc2 = make_array(lnvv);
     float * dintx1 = make_array(lnvv);
@@ -157,6 +155,32 @@ int main(int argc, char* argv[])
     __itt_resume();
 #endif
 
+#if USE_OPENMP_TARGET
+#pragma omp target data						    \
+  map(to: f1n[0:lnvv], f1t[0:lnvv],				    \
+      f2n[0:lnvv], f2t[0:lnvv],					    \
+      f3n[0:lnvv], f3t[0:lnvv],					    \
+      f4n[0:lnvv], f4t[0:lnvv] )				    \
+  map(to: dintc1[0:nvir], dintc2[0:nvir],                           \
+      dintx1[0:nvir], dintx2[0:nvir],                               \
+      t1v1[0:nvir],   t1v2[0:nvir] )                                \
+  map(to: eorb[0:nbf] )						    \
+  map(to: Tkj[0:kchunk*lnvv],					    \
+      Kkj[0:kchunk*lnov],					    \
+      Jkj[0:kchunk*lnov],					    \
+      Jka[0:kchunk*lnvv],					    \
+      Tka[0:kchunk*lnov],					    \
+      Kka[0:kchunk*lnvv],					    \
+      Xka[0:kchunk*lnov])					    \
+  map(to: Jia[0:lnvv],						    \
+      Tia[0:lnov*nocc],                                             \
+      Kia[0:lnvv],						    \
+      Xia[0:lnov*nocc],                                             \
+      Tij[0:lnvv],						    \
+      Kij[0:lnov*nocc],                                             \
+      Jij[0:lnov*nocc])
+#endif  // USE_OPENMP_TARGET
+    {
     for (int klo=1; klo<=nocc; klo+=kchunk) {
         const int khi = MIN(nocc, klo+kchunk-1);
         int a=1;
@@ -197,6 +221,8 @@ int main(int argc, char* argv[])
 maxed_out:
     printf("");
 
+    } // omp target data
+
 #ifdef USE_VTUNE
     __itt_pause();
 #endif
@@ -211,6 +237,7 @@ maxed_out:
         tmin  = MIN(tmin,timers[i]);
     }
     double tavg = tsum / iter;
+    printf("TOTAL ITER: %d\n", iter);
     printf("TIMING: min=%f, max=%f, avg=%f\n", tmin, tmax, tavg);
 
     double sgemm_flops = ((8.0*nvir)*nvir)*(nvir+nocc);
@@ -230,5 +257,16 @@ maxed_out:
 
     printf("SUCCESS\n");
 
+    free(f1n);free(f2n);free(f3n);free(f4n);free(f1t);free(f2t);free(f3t);free(f4t);
+    free(Tij);free(Tkj);free(Tia);free(Tka);
+    free(Xia);free(Xka);
+    free(Jia);free(Jka);
+    free(Kia);free(Kka);
+    free(Jij);free(Jkj);
+    free(Kij);free(Kkj);
+    free(dintc1);free(dintc2);
+    free(dintx1);free(dintx2);
+    free(t1v1);free(t1v2);
+    free(timers);
     return 0;
 }
