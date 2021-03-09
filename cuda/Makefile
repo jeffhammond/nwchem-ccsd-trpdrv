@@ -1,4 +1,4 @@
-OPTFLAGS	 = -O2
+OPTFLAGS	 = -O2 -g
 CUBLASFLAGS	 = -I/usr/local/cuda-10.0/targets/aarch64-linux/include \
 		   -L/usr/local/cuda-10.0/targets/aarch64-linux/lib -lcublas
 
@@ -7,13 +7,10 @@ CFLAGS		 = $(OPTFLAGS) $(CUDAFLAGS) $(CUBLASFLAGS)
 
 all: test_cuda
 
-ccsd_tengy_cuda.o: ccsd_tengy_cuda.cu
-	$(CC) $(CFLAGS) -c $< -o $@
-
 ccsd_trpdrv_cuda.o: ccsd_trpdrv_cuda.cu
 	$(CC) $(CFLAGS) -c $< -o $@
 
-test_cuda: test.c ccsd_trpdrv_cuda.o ccsd_tengy_cuda.o gettime.o
+test_cuda: test.c ccsd_trpdrv_cuda.o gettime.o
 	$(CC) $(CFLAGS) $^ -o $@
 
 gettime.o: gettime.c

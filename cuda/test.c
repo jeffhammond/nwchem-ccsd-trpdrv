@@ -29,12 +29,31 @@ void ccsd_trpdrv_cuda_(double * restrict f1n, double * restrict f1t,
                        double * restrict dintc1, double * restrict dintx1, double * restrict t1v1,
                        double * restrict dintc2, double * restrict dintx2, double * restrict t1v2);
 
-double * make_array(int n)
+double * make_host_array(int n)
 {
-    double * a = malloc(n*sizeof(double));
+    double * a;
+    cudaError_t e = cudaMallocHost((void**)&a, n*sizeof(double));
+    if (e != cudaSuccess) {
+        printf("cudaMallocManaged failed\n");
+        abort();
+    }
     for (int i=0; i<n; i++) {
         a[i] = 1.0/(100.0+i);
     }
+    return a;
+}
+
+double * make_array(int n)
+{
+    double * a;
+    cudaError_t e = cudaMalloc((void**)&a, n*sizeof(double));
+    if (e != cudaSuccess) {
+        printf("cudaMallocManaged failed\n");
+        abort();
+    }
+    //for (int i=0; i<n; i++) {
+    //    a[i] = 1.0/(100.0+i);
+    //}
     return a;
 }
 
@@ -88,7 +107,7 @@ int main(int argc, char* argv[])
         return MAX_MEM;
     }
 
-    double * eorb = make_array(nbf);
+    double * eorb = make_host_array(nbf);
 
     double * f1n = make_array(lnvv);
     double * f2n = make_array(lnvv);
