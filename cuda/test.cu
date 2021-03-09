@@ -12,22 +12,26 @@
 #define MIN(x,y) (x<y ? x : y)
 #define MAX(x,y) (x>y ? x : y)
 
+#define RESTRICT
+
+extern "C" {
+
 double gettime(void);
 
-void ccsd_trpdrv_cuda_(double * restrict f1n, double * restrict f1t,
-                       double * restrict f2n, double * restrict f2t,
-                       double * restrict f3n, double * restrict f3t,
-                       double * restrict f4n, double * restrict f4t,
-                       double * restrict eorb,
-                       int    * restrict ncor_, int * restrict nocc_, int * restrict nvir_,
-                       double * restrict emp4_, double * restrict emp5_,
-                       int    * restrict a_, int * restrict i_, int * restrict j_, int * restrict k_, int * restrict klo_,
-                       double * restrict tij, double * restrict tkj, double * restrict tia, double * restrict tka,
-                       double * restrict xia, double * restrict xka, double * restrict jia, double * restrict jka,
-                       double * restrict kia, double * restrict kka, double * restrict jij, double * restrict jkj,
-                       double * restrict kij, double * restrict kkj,
-                       double * restrict dintc1, double * restrict dintx1, double * restrict t1v1,
-                       double * restrict dintc2, double * restrict dintx2, double * restrict t1v2);
+void ccsd_trpdrv_cuda_(double * RESTRICT f1n, double * RESTRICT f1t,
+                       double * RESTRICT f2n, double * RESTRICT f2t,
+                       double * RESTRICT f3n, double * RESTRICT f3t,
+                       double * RESTRICT f4n, double * RESTRICT f4t,
+                       double * RESTRICT eorb,
+                       int    * RESTRICT ncor_, int * RESTRICT nocc_, int * RESTRICT nvir_,
+                       double * RESTRICT emp4_, double * RESTRICT emp5_,
+                       int    * RESTRICT a_, int * RESTRICT i_, int * RESTRICT j_, int * RESTRICT k_, int * RESTRICT klo_,
+                       double * RESTRICT tij, double * RESTRICT tkj, double * RESTRICT tia, double * RESTRICT tka,
+                       double * RESTRICT xia, double * RESTRICT xka, double * RESTRICT jia, double * RESTRICT jka,
+                       double * RESTRICT kia, double * RESTRICT kka, double * RESTRICT jij, double * RESTRICT jkj,
+                       double * RESTRICT kij, double * RESTRICT kkj,
+                       double * RESTRICT dintc1, double * RESTRICT dintx1, double * RESTRICT t1v1,
+                       double * RESTRICT dintc2, double * RESTRICT dintx2, double * RESTRICT t1v2);
 
 double * make_host_array(int n)
 {
@@ -43,6 +47,16 @@ double * make_host_array(int n)
     return a;
 }
 
+__global__
+void dumb_fill(int n, double * a)
+{
+    //for (int i=0; i<n; i++) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        a[i] = 1.0/(100.0+i);
+    }
+}
+
 double * make_array(int n)
 {
     double * a;
@@ -54,8 +68,11 @@ double * make_array(int n)
     //for (int i=0; i<n; i++) {
     //    a[i] = 1.0/(100.0+i);
     //}
+    dumb_fill<<<n,1>>>(n,a);
     return a;
 }
+
+} // extern "C"
 
 int main(int argc, char* argv[])
 {
@@ -144,10 +161,10 @@ int main(int argc, char* argv[])
     double * t1v2   = make_array(lnvv);
 
     int ntimers = MIN(maxiter,nocc*nocc*nocc*nocc);
-    double * timers = calloc(ntimers,sizeof(double));
+    double * timers = (double*)calloc(ntimers,sizeof(double));
 
     double emp4=0.0, emp5=0.0;
-    int a=1, i=1, j=1, k=1, klo=1;
+    //int a=1, i=1, j=1, k=1, klo=1;
 
     int iter = 0;
 

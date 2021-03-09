@@ -10,7 +10,7 @@ all: test_cuda
 ccsd_trpdrv_cuda.o: ccsd_trpdrv_cuda.cu
 	$(CC) $(CFLAGS) -c $< -o $@
 
-test_cuda: test.c ccsd_trpdrv_cuda.o gettime.o
+test_cuda: test.cu ccsd_trpdrv_cuda.o gettime.o
 	$(CC) $(CFLAGS) $^ -o $@
 
 gettime.o: gettime.c
