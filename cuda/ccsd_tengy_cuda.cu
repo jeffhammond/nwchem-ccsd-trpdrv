@@ -2,66 +2,31 @@
 
 #define MIN(x,y) ((x)<(y)?(x):(y))
 
-void ccsd_tengy_omp(const double * restrict f1n,    const double * restrict f1t,
-                    const double * restrict f2n,    const double * restrict f2t,
-                    const double * restrict f3n,    const double * restrict f3t,
-                    const double * restrict f4n,    const double * restrict f4t,
-                    const double * restrict dintc1, const double * restrict dintx1, const double * restrict t1v1,
-                    const double * restrict dintc2, const double * restrict dintx2, const double * restrict t1v2,
-                    const double * restrict eorb,   const double eaijk,
-                    double * restrict emp4i_, double * restrict emp5i_,
-                    double * restrict emp4k_, double * restrict emp5k_,
-                    const int ncor, const int nocc, const int nvir)
+#define RESTRICT
+
+#define TILESIZE 32
+
+extern "C" {
+
+void ccsd_tengy_cuda(const double * RESTRICT f1n,    const double * RESTRICT f1t,
+                     const double * RESTRICT f2n,    const double * RESTRICT f2t,
+                     const double * RESTRICT f3n,    const double * RESTRICT f3t,
+                     const double * RESTRICT f4n,    const double * RESTRICT f4t,
+                     const double * RESTRICT dintc1, const double * RESTRICT dintx1, const double * RESTRICT t1v1,
+                     const double * RESTRICT dintc2, const double * RESTRICT dintx2, const double * RESTRICT t1v2,
+                     const double * RESTRICT eorb,   const double eaijk,
+                     double * RESTRICT emp4i_, double * RESTRICT emp5i_,
+                     double * RESTRICT emp4k_, double * RESTRICT emp5k_,
+                     const int ncor, const int nocc, const int nvir)
 {
     double emp5i = 0.0, emp4i = 0.0, emp5k = 0.0, emp4k = 0.0;
 
-#ifdef USE_OPENMP_TARGET
-#define TILESIZE 64
-    printf("ccsd_tengy_omp using OpenMP target for - variant %d\n", OPENMP_TARGET_VARIANT );
-    #pragma omp target map(to: f1n[0:nvir*nvir], f1t[0:nvir*nvir], \
-                               f2n[0:nvir*nvir], f2t[0:nvir*nvir], \
-                               f3n[0:nvir*nvir], f3t[0:nvir*nvir], \
-                               f4n[0:nvir*nvir], f4t[0:nvir*nvir] ) \
-                       map(to: dintc1[0:nvir], dintc2[0:nvir], \
-                               dintx1[0:nvir], dintx2[0:nvir], \
-                               t1v1[0:nvir],   t1v2[0:nvir] ) \
-                       map(to: eorb[0:ncor+nocc+nvir] ) \
-                       map(to: ncor, nocc, nvir, eaijk) \
-                       map(tofrom: emp5i, emp4i, emp5k, emp4k)
-# if OPENMP_TARGET_VARIANT == 0
-#warning variant 0
-    // default version
-    #pragma omp parallel for reduction(+:emp5i,emp4i) reduction(+:emp5k,emp4k)
-    for (int b = 0; b < nvir; ++b) {{
-        #pragma omp parallel for reduction(+:emp5i,emp4i) reduction(+:emp5k,emp4k)
-        for (int c = 0; c < nvir; ++c) {{
-# elif OPENMP_TARGET_VARIANT == 2
-#warning variant 2
-    #pragma omp parallel for reduction(+:emp5i,emp4i) reduction(+:emp5k,emp4k)
-    for (int bt = 0; bt < nvir; bt+=TILESIZE) {
-      #pragma omp parallel for reduction(+:emp5i,emp4i) reduction(+:emp5k,emp4k)
-      for (int ct = 0; ct < nvir; ct+=TILESIZE) {
-        #pragma omp parallel for reduction(+:emp5i,emp4i) reduction(+:emp5k,emp4k)
-        for (int b = bt; b < MIN(bt+TILESIZE,nvir); ++b) {
-          #pragma omp parallel for reduction(+:emp5i,emp4i) reduction(+:emp5k,emp4k)
-          for (int c = ct; c < MIN(ct+TILESIZE,nvir); ++c) {
-# else
-#  error No variant selected!
-# endif
-#else
-#define TILESIZE 32
-# if 0
-    #pragma omp parallel for reduction(+:emp5i,emp4i) reduction(+:emp5k,emp4k)
-    for (int b = 0; b < nvir; ++b) {{
-        for (int c = 0; c < nvir; ++c) {{
-# else
     #pragma omp parallel for collapse(2) reduction(+:emp5i,emp4i) reduction(+:emp5k,emp4k)
     for (int bt = 0; bt < nvir; bt+=TILESIZE) {
       for (int ct = 0; ct < nvir; ct+=TILESIZE) {
         for (int b = bt; b < MIN(bt+TILESIZE,nvir); ++b) {
           for (int c = ct; c < MIN(ct+TILESIZE,nvir); ++c) {
-# endif
-#endif
+
             const double denom = -1.0 / (eorb[ncor+nocc+b] + eorb[ncor+nocc+c] + eaijk);
 
             // nvir < 10000 so this should never overflow
@@ -116,4 +81,6 @@ void ccsd_tengy_omp(const double * restrict f1n,    const double * restrict f1t,
     *emp4k_ = emp4k;
     *emp5i_ = emp5i;
     *emp5k_ = emp5k;
+}
+
 }
