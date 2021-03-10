@@ -53,6 +53,7 @@ void ccsd_tengy_cuda(const double * RESTRICT f1n,    const double * RESTRICT f1t
                      double * RESTRICT emp4k_, double * RESTRICT emp5k_,
                      const int ncor, const int nocc, const int nvir)
 {
+    // need to implement a proper reduction on these
     double emp5i = 0.0, emp4i = 0.0, emp5k = 0.0, emp4k = 0.0;
 
     //for (int b = 0; b < nvir; ++b)
