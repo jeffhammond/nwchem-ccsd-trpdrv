@@ -1,0 +1,12 @@
+Download https://gitlab.devtools.intel.com/jrhammon/nwchem-ccsd-trpdrv-c99.  Debug Gitlab access if necessary.
+Compile with “cd omp && make -j -k”.  Debug Intel compiler installation if necessary.  The default compiler settings are for ICC and AVX2.
+ 
+The programs test_c99 and test_f77 are nearly identical.  The Fortran one may run faster due to better compiler optimization.  The C version exists because computer scientists don’t think Fortran is cool and our non-x86 compilers get a C front-end at least a year before the Fortran front-end works.
+ 
+The program arguments are as follows:
+./test_c99 nocc nvir [maxiter] [nkpass]
+- nocc is 40 to 200
+- nvir is 5 to 10 times nocc
+- maxiter defaults to 100.  On a Xeon, you need at least 500 iterations to warm up the chip and get reproducible behavior if the frequency is capable of varying.  With a chip simulator or a GPU, you can get away with 10 iterations or less.
+- nkpass is usually optional.  By default, the test won’t consume more than 4 GB because I don’t want my laptop to swap and that is a reasonable memory footprint anyways.  If you run a very large problem like nvir=2000, you’ll need to set nkpass>1 to fit into 4 GB.
+
